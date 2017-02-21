@@ -9,81 +9,196 @@
 import SpriteKit
 import GameplayKit
 
+//public variable
+var currentGameType = gameType.medium
+var navigationBarHeight = CGFloat()
+let statusBarSize = UIApplication.shared.statusBarFrame.size//get the size of status bar
+
 class GameScene: SKScene {
     
-    private var label : SKLabelNode?
-    private var spinnyNode : SKShapeNode?
+    var ball = SKSpriteNode()
+    var enemy = SKSpriteNode()
+    var main = SKSpriteNode()
+    var enemyScore = SKLabelNode()
+    var mainScore = SKLabelNode()
+    var score = [Int]()
     
     override func didMove(to view: SKView) {
+        print(statusBarSize.height)
+        print(navigationBarHeight)
+        let height = self.frame.height
         
-        // Get label node from scene and store it for use later
-        self.label = self.childNode(withName: "//helloLabel") as? SKLabelNode
-        if let label = self.label {
-            label.alpha = 0.0
-            label.run(SKAction.fadeIn(withDuration: 2.0))
+        ball = self.childNode(withName:"ball") as! SKSpriteNode
+        enemy = self.childNode(withName: "enemy") as! SKSpriteNode
+        main = self.childNode(withName: "main") as! SKSpriteNode
+        mainScore = self.childNode(withName: "mainScore") as! SKLabelNode
+        enemyScore = self.childNode(withName: "enemyScore") as! SKLabelNode
+        enemy.position.y = height/2 - 70 - navigationBarHeight - statusBarSize.height //we can also reduce the status bar height which is 20
+        main.position.y = -height/2 + 70
+        startGame()
+        
+        
+        let border = SKPhysicsBody(edgeLoopFrom: self.frame)
+        border.friction = 0
+        border.restitution = 1
+        self.physicsBody = border
+        
+        
+    }
+    
+    func startGame(){
+        switch currentGameType{
+        case .easy:
+            ball.physicsBody?.applyImpulse(CGVector(dx:15,dy:15))
+            break
+        case .medium:
+            ball.physicsBody?.applyImpulse(CGVector(dx:20,dy:20))
+            break
+        case .hard:
+            ball.physicsBody?.applyImpulse(CGVector(dx:30,dy:30))
+            break
+        case .player2:
+            ball.physicsBody?.applyImpulse(CGVector(dx:20,dy:20))
+            break
         }
         
-        // Create shape node to use during mouse interaction
-        let w = (self.size.width + self.size.height) * 0.05
-        self.spinnyNode = SKShapeNode.init(rectOf: CGSize.init(width: w, height: w), cornerRadius: w * 0.3)
+        score = [0,0]
+        mainScore.text = "0"
+        enemyScore.text = "0"
+    }
+    
+    func addScore(whoWon:SKNode){
         
-        if let spinnyNode = self.spinnyNode {
-            spinnyNode.lineWidth = 2.5
+        ball.position = CGPoint(x: 0, y: 0)
+        ball.physicsBody?.velocity = CGVector(dx:0, dy:0)
+        if whoWon == enemy{
+            score[1] += 1
+            enemyScore.text = String(score[1])
             
-            spinnyNode.run(SKAction.repeatForever(SKAction.rotate(byAngle: CGFloat(M_PI), duration: 1)))
-            spinnyNode.run(SKAction.sequence([SKAction.wait(forDuration: 0.5),
-                                              SKAction.fadeOut(withDuration: 0.5),
-                                              SKAction.removeFromParent()]))
+            switch currentGameType{
+            case .easy:
+                ball.physicsBody?.applyImpulse(CGVector(dx:15,dy:15))
+                break
+            case .medium:
+                ball.physicsBody?.applyImpulse(CGVector(dx:20,dy:20))
+                break
+            case .hard:
+                ball.physicsBody?.applyImpulse(CGVector(dx:30,dy:30))
+                break
+            case .player2:
+                ball.physicsBody?.applyImpulse(CGVector(dx:20,dy:20))
+                break
+            }
         }
-    }
-    
-    
-    func touchDown(atPoint pos : CGPoint) {
-        if let n = self.spinnyNode?.copy() as! SKShapeNode? {
-            n.position = pos
-            n.strokeColor = SKColor.green
-            self.addChild(n)
-        }
-    }
-    
-    func touchMoved(toPoint pos : CGPoint) {
-        if let n = self.spinnyNode?.copy() as! SKShapeNode? {
-            n.position = pos
-            n.strokeColor = SKColor.blue
-            self.addChild(n)
-        }
-    }
-    
-    func touchUp(atPoint pos : CGPoint) {
-        if let n = self.spinnyNode?.copy() as! SKShapeNode? {
-            n.position = pos
-            n.strokeColor = SKColor.red
-            self.addChild(n)
-        }
-    }
-    
-    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        if let label = self.label {
-            label.run(SKAction.init(named: "Pulse")!, withKey: "fadeInOut")
+        if whoWon == main{
+            score[0] += 1
+            mainScore.text = String(score[0])
+            
+            switch currentGameType{
+            case .easy:
+                ball.physicsBody?.applyImpulse(CGVector(dx:15,dy:15))
+                break
+            case .medium:
+                ball.physicsBody?.applyImpulse(CGVector(dx:20,dy:20))
+                break
+            case .hard:
+                ball.physicsBody?.applyImpulse(CGVector(dx:30,dy:30))
+                break
+            case .player2:
+                ball.physicsBody?.applyImpulse(CGVector(dx:20,dy:20))
+                break
+            }
         }
         
-        for t in touches { self.touchDown(atPoint: t.location(in: self)) }
     }
     
+    //location updating with the location touched
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        
+        for touch in touches{
+            let location = touch.location(in: self)
+            if currentGameType == .player2{
+                if location.y > 0{
+                    enemy.run(SKAction.moveTo(x: location.x, duration: 0.2))
+                }
+                if location.y < 0{
+                    main.run(SKAction.moveTo(x: location.x, duration: 0.2))
+                }
+            }else{
+                main.run(SKAction.moveTo(x: location.x, duration: 0.2))
+            }
+        }
+    }
+    
+    //location moving with the touch
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
-        for t in touches { self.touchMoved(toPoint: t.location(in: self)) }
+        for touch in touches{
+            let location = touch.location(in: self)
+            if currentGameType == .player2{
+                if location.y > 0{
+                    enemy.run(SKAction.moveTo(x: location.x, duration: 0.2))
+                }
+                if location.y < 0{
+                    main.run(SKAction.moveTo(x: location.x, duration: 0.2))
+                }
+            }else{
+                main.run(SKAction.moveTo(x: location.x, duration: 0.2))
+            }
+        }
     }
+   
     
-    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-        for t in touches { self.touchUp(atPoint: t.location(in: self)) }
-    }
-    
-    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
-        for t in touches { self.touchUp(atPoint: t.location(in: self)) }
-    }
-    
-    
+    //this function is called before each frame is rendered
     override func update(_ currentTime: TimeInterval) {
-        // Called before each frame is rendered
+        
+        switch currentGameType{
+        case .easy:
+                    enemy.run(SKAction.moveTo(x: ball.position.x, duration: 1))
+                break
+        case .medium:
+                    enemy.run(SKAction.moveTo(x: ball.position.x, duration: 0.5))
+                break
+        case .hard:
+                    enemy.run(SKAction.moveTo(x: ball.position.x, duration: 0.2))
+                break
+        default:
+            break
+        }
+        
+        
+        
+        if (ball.position.y <= main.position.y - 30){
+            addScore(whoWon: enemy)
+        }
+        if (ball.position.y >= enemy.position.y + 30){
+            addScore(whoWon: main)
+        }
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
